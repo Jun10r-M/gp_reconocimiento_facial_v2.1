@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo - Gestión de Asistencias</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        if (!localStorage.getItem('auth_token')) {
+            window.location.href = '/login';
+        }
+    </script>
+  <script type="module" crossorigin src="/assets/admin-COTnIsVm.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="modulepreload" crossorigin href="/assets/Toast-CrBOtqle.js">
+</head>
+<body class="admin-body">
+    <div class="admin-layout">
+        <!-- El Sidebar se renderizará dinámicamente aquí -->
+        <nav class="sidebar" id="sidebar-container"></nav>
+
+        <main class="content">
+            <header class="content-header">
+                <h1 id="section-title">Dashboard</h1>
+                <div class="user-menu-container">
+                    <div id="admin-user-btn" class="user-btn">Cargando...</div>
+                    <div id="admin-dropdown" class="dropdown hidden">
+                        <div id="btn-scanner" class="dropdown-item">Regresar al Escáner</div>
+                        <div id="btn-logout" class="dropdown-item" style="color: var(--danger); font-weight: 600;">Cerrar Sesión</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Contenedor dinámico de módulos -->
+            <div id="content-area"></div>
+        </main>
+    </div>
+
+    <!-- Chatbot Inteligente Flotante (IA) -->
+    <div class="smart-chat-container">
+        <button class="chat-toggle" id="chat-toggle-btn">Asistente IA</button>
+        <div class="chat-window hidden" id="chat-window">
+            <div class="chat-header">Asistente IA - RRHH</div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="bot-msg">¡Hola! Soy tu asistente inteligente del panel. Como administrador, puedes consultarme políticas internas o pedirme pronósticos de planilla, horas extras y ausentismo.</div>
+            </div>
+            <div class="chat-suggestions" id="chat-suggestions">
+                <button class="suggestion-pill">Planilla del próximo mes</button>
+                <button class="suggestion-pill">Horas extras proyectadas</button>
+                <button class="suggestion-pill">Tendencia de ausentismo</button>
+                <button class="suggestion-pill">¿Cómo justifico una falta?</button>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Pregunta algo al asistente...">
+                <button id="chat-send-btn">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de inicialización de la app -->
+</body>
+</html>

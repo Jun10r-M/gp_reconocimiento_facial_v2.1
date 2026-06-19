@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Asistencia - Reconocimiento Facial</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/assets/index-CXObOd0h.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
+</head>
+<body class="home-body">
+    <div class="glass-container">
+        <header>
+            <h1>Gestión de Asistencias <span>v1.0</span></h1>
+            <p id="date-display"></p>
+        </header>
+
+        <div class="video-section">
+            <div class="video-wrapper">
+                <video id="webcam" autoplay playsinline></video>
+
+                <div class="scanner-overlay">
+                    <svg class="progress-ring" width="300" height="300" viewBox="0 0 300 300">
+                        <circle id="scanner-circle" class="progress-ring__circle" fill="transparent" r="135" cx="150" cy="150" />
+                    </svg>
+                    <div class="face-guide"></div>
+                </div>
+
+                <div id="floating-label" class="floating-label hidden"></div>
+            </div>
+
+            <!-- Success Card -->
+            <div id="success-card" class="success-card hidden">
+                <div class="card-header">
+                    <div class="success-icon">✓</div>
+                    <div class="status-text">MARCACIÓN EXITOSA</div>
+                </div>
+                <div class="card-body">
+                    <h2 id="card-name">NOMBRE EMPLEADO</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">Documento:</span>
+                            <span id="card-doc" class="value">00000000</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Cargo:</span>
+                            <span id="card-role" class="value">PUESTO</span>
+                        </div>
+                    </div>
+                    <div class="time-stamp" id="card-time">12:00:00 PM</div>
+                </div>
+                <div class="card-footer" id="card-action">MARCACIÓN REGISTRADA</div>
+            </div>
+
+            <!-- Error Card -->
+            <div id="error-card" class="success-card hidden">
+                <div class="card-header">
+                    <div class="success-icon">!</div>
+                    <div class="status-text">ATENCIÓN</div>
+                </div>
+                <div class="card-body">
+                    <h2 id="error-message" style="color: white; font-size: 1.2rem; margin-top: 10px;">SISTEMA SIN EMPLEADOS</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 10px;">Debe registrar al menos un empleado desde el Panel Administrativo para usar el escáner.</p>
+                </div>
+            </div>
+
+            <div class="controls">
+                <a href="/admin" class="back-link">Acceso Administrativo</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Administrativo - Control de Asistencia</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script>
+        // Si ya hay sesión iniciada, enviar directo al admin panel
+        if (localStorage.getItem('auth_token')) {
+            window.location.href = '/admin';
+        }
+    </script>
+</head>
+<body class="home-body">
+    <div class="login-card">
+        <div class="login-logo">
+            <h2>RRHH Portal <span>v2.0</span></h2>
+            <p>Gestión de Asistencia y Planilla</p>
+        </div>
+
+        <div class="login-tabs">
+            <div class="login-tab active" id="tab-login">Ingresar</div>
+            <div class="login-tab" id="tab-recover">Recuperar</div>
+        </div>
+
+        <!-- Form Iniciar Sesión -->
+        <form id="form-login" class="login-form">
+            <div class="custom-form-group">
+                <label>Usuario</label>
+                <input type="text" name="username" required placeholder="Ingrese su usuario" autocomplete="username">
+            </div>
+            <div class="custom-form-group">
+                <label>Contraseña</label>
+                <input type="password" name="password" required placeholder="Ingrese su contraseña" autocomplete="current-password">
+            </div>
+            <div style="margin-top: 10px;">
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 14px;">Iniciar Sesión</button>
+            </div>
+        </form>
+
+        <!-- Form Recuperar Contraseña -->
+        <form id="form-recover" class="login-form hidden">
+            <div class="custom-form-group">
+                <label>Correo de la Cuenta</label>
+                <input type="email" name="email" required placeholder="Ej: admin@compania.pe">
+            </div>
+            <div style="margin-top: 10px;">
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 14px; background: #64748b;">Recuperar Contraseña</button>
+            </div>
+        </form>
+
+        <div style="text-align: center; margin-top: 25px;">
+            <a href="/" style="font-size: 0.85rem; color: var(--text-muted); text-decoration: none; transition: var(--transition);" id="back-to-clock">← Regresar al Reloj Marcador</a>
+        </div>
+    </div>
+
+    <script type="module" src="/login.ts"></script>
+</body>
+</html>
