@@ -51,8 +51,10 @@ class RbacSyncService:
             with db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query, params)
-                res = cursor.fetchone()
-                return res[0] if res else None
+                if "RETURNING" in query.upper():
+                    res = cursor.fetchone()
+                    return res[0] if res else None
+                return None
 
     async def sync_database_rbac(self):
         """Ejecuta la sincronización completa del esquema de seguridad."""

@@ -60,7 +60,7 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [OK] Todo listo. Iniciando el servidor...
+echo [OK] Todo listo. Iniciando el servidor con PostgreSQL...
 echo.
 echo ------------------------------------------------------
 echo    ACCESO DASHBOARD: http://127.0.0.1:8080/admin
@@ -68,6 +68,7 @@ echo    ACCESO ESCANER:   http://127.0.0.1:8080/
 echo ------------------------------------------------------
 echo.
 
+set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/asistencia_db
 python run.py
 
 pause

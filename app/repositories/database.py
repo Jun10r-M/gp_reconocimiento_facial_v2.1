@@ -3,7 +3,10 @@ import sqlite3
 import psycopg2
 from contextlib import contextmanager
 from typing import Generator, Any
+from dotenv import load_dotenv
 from app.config import settings
+
+load_dotenv()
 
 class Database:
     """

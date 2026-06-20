@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo - Kioga Computer Store</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="admin-body">
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-info">
+                    <h2>Kioga Computer Store</h2>
+                    <p>RRHH V2.3</p>
+                </div>
+                <button class="sidebar-toggle" id="sidebar-toggle">&#8249;</button>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-header" data-toggle="panel-control">
+                    <span>PANEL DE CONTROL</span>
+                    <span class="chevron">&#8744;</span>
+                </div>
+                <ul class="nav-links" id="panel-control">
+                    <li class="active" data-section="resumen">
+                        <span class="nav-icon">&#9638;</span> Resumen
+                    </li>
+                    <li data-section="asistencia">
+                        <span class="nav-icon">&#128197;</span> Asistencia
+                    </li>
+                    <li data-section="justificaciones">
+                        <span class="nav-icon">&#9888;</span> Justificaciones
+                    </li>
+                    <li data-section="turnos">
+                        <span class="nav-icon">&#128336;</span> Turnos
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-header" data-toggle="gestion-interna">
+                    <span>GESTI&Oacute;N INTERNA</span>
+                    <span class="chevron">&#8250;</span>
+                </div>
+                <ul class="nav-links collapsed" id="gestion-interna">
+                    <li data-section="planilla">
+                        <span class="nav-icon">&#128176;</span> Planilla
+                    </li>
+                    <li data-section="empleados">
+                        <span class="nav-icon">&#128101;</span> Empleados
+                    </li>
+                    <li data-section="faltas">
+                        <span class="nav-icon">&#10060;</span> Faltas
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-header" data-toggle="admin-ti">
+                    <span>ADMINISTRACI&Oacute;N Y TI</span>
+                    <span class="chevron">&#8250;</span>
+                </div>
+                <ul class="nav-links collapsed" id="admin-ti">
+                    <li data-section="configuracion">
+                        <span class="nav-icon">&#9881;</span> Configuraci&oacute;n
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content">
+            <header class="content-header">
+                <h1 id="section-title">Resumen de Estad&iacute;sticas</h1>
+                <div class="user-menu-container">
+                    <div id="admin-user-btn" class="user-btn">SUPERADMIN</div>
+                    <div id="admin-dropdown" class="dropdown hidden">
+                        <div id="btn-scanner" class="dropdown-item">Regresar al Esc&aacute;ner</div>
+                        <div id="btn-logout" class="dropdown-item">Cerrar Sesi&oacute;n</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Resumen Section -->
+            <section id="section-resumen" class="dashboard-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>ASISTENCIAS DE HOY</h3>
+                        <p id="stat-total-att">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>PLANILLA TOTAL</h3>
+                        <p id="stat-total-pay">S/ 0.00</p>
+                    </div>
+                </div>
+                <div class="chart-container glass">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Tables Section -->
+            <section id="section-table" class="dashboard-section hidden">
+                <div class="filter-bar hidden" id="filter-container">
+                    <div class="filter-group">
+                        <input type="text" id="filter-input" placeholder="Buscar...">
+                        <button id="btn-new-emp" class="btn-primary hidden">+ Nuevo Empleado</button>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <table id="data-table">
+                        <thead>
+                            <tr id="table-head"></tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal Nuevo Empleado -->
+    <div id="modal-emp" class="modal hidden">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h2>Registrar Nuevo Empleado</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <form id="form-emp" class="modal-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" name="nombre" required placeholder="Ej: Juan Perez">
+                    </div>
+                    <div class="form-group">
+                        <label>Puesto / Cargo</label>
+                        <input type="text" name="puesto" required placeholder="Ej: Analista">
+                    </div>
+                    <div class="form-group">
+                        <label>Sueldo Mensual (S/)</label>
+                        <input type="number" name="sueldo" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Documento de Identidad</label>
+                        <input type="text" name="documento" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Foto para Reconocimiento</label>
+                        <input type="file" name="foto" accept="image/*" required>
+                    </div>
+                </div>
+                <div class="form-footer">
+                    <button type="submit" class="btn-save">Guardar Empleado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Smart Chat -->
+    <div class="smart-chat-container">
+        <div id="chat-window" class="chat-window hidden">
+            <div class="chat-header">Asistente Inteligente</div>
+            <div id="chat-messages" class="chat-messages">
+                <div class="bot-msg">Hola, soy tu asistente. Preg&uacute;ntame sobre horas, pagos o marcaciones.</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Escribe tu consulta...">
+                <button id="chat-send">Enviar</button>
+            </div>
+        </div>
+        <button id="chat-toggle" class="chat-toggle">Asistente IA</button>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+
+</html>

@@ -5,17 +5,30 @@ declare const Chart: any;
 
 export class ResumenComponent extends BaseComponent {
   private chartInstance: any = null;
+  private allProcessed: any[] = [];
 
   render(): void {
     this.container.innerHTML = `
       <section id="section-resumen" class="dashboard-section animate-fade-in">
+        <div class="filter-date-bar" style="display:flex;gap:16px;align-items:center;margin-bottom:24px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="color:#9ca3af;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;">Desde</label>
+            <input type="date" id="filter-date-from" style="background:#1c2333;border:1px solid #2d3748;color:#f0f6fc;padding:10px 14px;border-radius:10px;font-family:Outfit,sans-serif;outline:none;">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="color:#9ca3af;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;">Hasta</label>
+            <input type="date" id="filter-date-to" style="background:#1c2333;border:1px solid #2d3748;color:#f0f6fc;padding:10px 14px;border-radius:10px;font-family:Outfit,sans-serif;outline:none;">
+          </div>
+          <button id="filter-date-btn" style="background:#e74c3c;color:white;border:none;padding:10px 24px;border-radius:10px;font-weight:600;cursor:pointer;font-family:Outfit,sans-serif;">Filtrar</button>
+          <button id="filter-date-clear" style="background:#2d3748;color:#9ca3af;border:none;padding:10px 18px;border-radius:10px;cursor:pointer;font-family:Outfit,sans-serif;">Limpiar</button>
+        </div>
         <div class="stats-grid">
           <div class="stat-card">
-            <h3>Asistencias de Hoy</h3>
+            <h3 id="stat-att-label">Asistencias de Hoy</h3>
             <p id="stat-total-att">Cargando...</p>
           </div>
           <div class="stat-card">
-            <h3>Planilla Total</h3>
+            <h3 id="stat-pay-label">Planilla Total</h3>
             <p id="stat-total-pay">Cargando...</p>
           </div>
         </div>
@@ -38,21 +51,65 @@ export class ResumenComponent extends BaseComponent {
       const attendance: AttendanceLog[] = data.attendance || [];
       const employees = data.employees || [];
 
-      // Procesar asistencias
-      const processed = this.processAttendance(attendance, employees);
-      
-      const statAtt = document.getElementById('stat-total-att');
-      const statPay = document.getElementById('stat-total-pay');
-      
-      if (statAtt) statAtt.innerText = processed.length.toString();
-      
-      const totalPay = processed.reduce((sum, item) => sum + (item.pago || 0), 0);
-      if (statPay) statPay.innerText = `S/ ${totalPay.toFixed(2)}`;
+      this.allProcessed = this.processAttendance(attendance, employees);
+      this.applyFilter();
 
-      this.renderChart(processed);
+      const btnFilter = document.getElementById('filter-date-btn');
+      const btnClear = document.getElementById('filter-date-clear');
+
+      if (btnFilter) btnFilter.addEventListener('click', () => this.applyFilter());
+      if (btnClear) btnClear.addEventListener('click', () => {
+        const f = document.getElementById('filter-date-from') as HTMLInputElement;
+        const t = document.getElementById('filter-date-to') as HTMLInputElement;
+        if (f) f.value = '';
+        if (t) t.value = '';
+        this.applyFilter();
+      });
     } catch (err) {
       console.error("Error al cargar resumen:", err);
     }
+  }
+
+  private applyFilter(): void {
+    const fromEl = document.getElementById('filter-date-from') as HTMLInputElement;
+    const toEl = document.getElementById('filter-date-to') as HTMLInputElement;
+    const fromVal = fromEl ? fromEl.value : '';
+    const toVal = toEl ? toEl.value : '';
+    const today = new Date().toISOString().split('T')[0];
+
+    let filtered = this.allProcessed;
+    const attLabel = document.getElementById('stat-att-label');
+    const payLabel = document.getElementById('stat-pay-label');
+
+    if (fromVal || toVal) {
+      filtered = this.allProcessed.filter(p => {
+        if (fromVal && p.fecha < fromVal) return false;
+        if (toVal && p.fecha > toVal) return false;
+        return true;
+      });
+      if (attLabel) attLabel.innerText = (fromVal === toVal && fromVal)
+        ? 'Asistencias del ' + fromVal
+        : 'Asistencias (Filtrado)';
+      if (payLabel) payLabel.innerText = 'Planilla (Filtrado)';
+    } else {
+      filtered = this.allProcessed;
+      if (attLabel) attLabel.innerText = 'Asistencias de Hoy';
+      if (payLabel) payLabel.innerText = 'Planilla Total';
+    }
+
+    const statAtt = document.getElementById('stat-total-att');
+    const statPay = document.getElementById('stat-total-pay');
+
+    if (!fromVal && !toVal) {
+      if (statAtt) statAtt.innerText = this.allProcessed.filter(x => x.fecha === today).length.toString();
+    } else {
+      if (statAtt) statAtt.innerText = filtered.length.toString();
+    }
+
+    const totalPay = filtered.reduce((sum, item) => sum + (item.pago || 0), 0);
+    if (statPay) statPay.innerText = `S/ ${totalPay.toFixed(2)}`;
+
+    this.renderChart(filtered);
   }
 
   onDestroy(): void {
@@ -81,7 +138,7 @@ export class ResumenComponent extends BaseComponent {
           id: att.employee_id,
           nombre: emp.full_name || att.nombre || "Desconocido",
           fecha: dateStr,
-          pago: (emp.monthly_salary || 1500) / 30, // Pago proporcional diario aproximado
+          pago: (emp.monthly_salary || 1500) / 30,
           timestamps: []
         };
       }
@@ -97,7 +154,6 @@ export class ResumenComponent extends BaseComponent {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Agrupar asistencias procesadas por fecha
     const dataByDate: { [key: string]: { count: number; names: string[] } } = {};
     processed.forEach(att => {
       if (!dataByDate[att.fecha]) {

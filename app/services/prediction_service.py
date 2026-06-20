@@ -10,13 +10,15 @@ class PredictionService:
         # Lambda para regularización de Cresta (Ridge)
         self.lmbda = 0.1
 
-    def _execute_write_raw(self, query: str, params: tuple = ()) -> None:
+    def _execute_write_raw(self, query: str, params: tuple = (), conn=None, cursor=None) -> None:
         if db.is_sqlite:
             query = query.replace("%s", "?")
-        with db.get_connection() as conn:
-            cursor = conn.cursor()
+        if conn and cursor:
             cursor.execute(query, params)
-            conn.commit()
+        else:
+            with db.get_connection() as c:
+                cur = c.cursor()
+                cur.execute(query, params)
 
     async def generate_historical_time_series_if_empty(self) -> None:
     
@@ -48,89 +50,91 @@ class PredictionService:
 
         periods = sorted(list(set(periods)))
 
-        np.random.seed(42) 
+        np.random.seed(42)
 
-        for period in periods:
-            year, month = map(int, period.split("-"))
-            is_peak = month in [7, 12] 
-            is_winter = month in [6, 7, 8] 
+        with db.get_connection() as conn:
+            cursor = conn.cursor()
+            for period in periods:
+                year, month = map(int, period.split("-"))
+                is_peak = month in [7, 12]
+                is_winter = month in [6, 7, 8]
 
-            for emp in employees:
-                emp_id = emp["id"]
-                contract = contracts.get(emp_id)
-                if not contract:
-                    continue
+                for emp in employees:
+                    emp_id = emp["id"]
+                    contract = contracts.get(emp_id)
+                    if not contract:
+                        continue
 
-                salary = float(contract["monthly_salary"])
-                wage = float(contract["hourly_wage"])
+                    salary = float(contract["monthly_salary"])
+                    wage = float(contract["hourly_wage"])
 
-                grati = salary if is_peak else 0.0
+                    grati = salary if is_peak else 0.0
 
-                ot_base = np.random.uniform(2, 10)
-                if is_peak:
-                    ot_base += np.random.uniform(5, 12)
-                
-                ot_25 = round(ot_base * 0.6, 2)
-                ot_35 = round(ot_base * 0.4, 2)
-                ot_pay = (ot_25 * wage * 1.25) + (ot_35 * wage * 1.35)
+                    ot_base = np.random.uniform(2, 10)
+                    if is_peak:
+                        ot_base += np.random.uniform(5, 12)
 
-                lateness_min = int(np.random.exponential(40))
-                lateness_ded = round((lateness_min / 60) * wage, 2)
+                    ot_25 = round(ot_base * 0.6, 2)
+                    ot_35 = round(ot_base * 0.4, 2)
+                    ot_pay = (ot_25 * wage * 1.25) + (ot_35 * wage * 1.35)
 
-                absence_chance = np.random.rand()
-                absences = 0
-                if is_winter and absence_chance > 0.8:
-                    absences = np.random.randint(1, 3)
-                elif absence_chance > 0.95:
-                    absences = 1
-                
-                absence_ded = round(absences * (salary / 30), 2)
+                    lateness_min = int(np.random.exponential(40))
+                    lateness_ded = round((lateness_min / 60) * wage, 2)
 
-                fam_allow = 102.50 if emp["has_children"] else 0.0
+                    absence_chance = np.random.rand()
+                    absences = 0
+                    if is_winter and absence_chance > 0.8:
+                        absences = np.random.randint(1, 3)
+                    elif absence_chance > 0.95:
+                        absences = 1
 
-                gross = salary + fam_allow + ot_pay + grati - lateness_ded - absence_ded
-                gross = max(gross, 0.0)
+                    absence_ded = round(absences * (salary / 30), 2)
 
-                rate = 0.13 if emp["pension_system"] == "ONP" else 0.1284
-                pension_ded = round(gross * rate, 2)
-                net = round(gross - pension_ded, 2)
+                    fam_allow = 102.50 if emp["has_children"] else 0.0
 
-                essalud = round(gross * 0.09, 2)
+                    gross = salary + fam_allow + ot_pay + grati - lateness_ded - absence_ded
+                    gross = max(gross, 0.0)
 
-                insert_payroll = """
-                    INSERT INTO payrolls (
-                        employee_id, period, days_worked, lateness_minutes,
-                        overtime_25_hours, overtime_35_hours, base_salary,
-                        family_allowance, overtime_pay, lateness_deduction,
-                        absence_deduction, gross_salary, pension_deduction,
-                        net_salary, essalud_contribution, created_by
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT(employee_id, period) DO NOTHING
-                """
-                self._execute_write_raw(insert_payroll, (
-                    emp_id, period, 30 - absences, lateness_min,
-                    ot_25, ot_35, salary, fam_allow, round(ot_pay, 2),
-                    lateness_ded, absence_ded, round(gross, 2), pension_ded,
-                    net, essalud, "ia_system"
-                ))
+                    rate = 0.13 if emp["pension_system"] == "ONP" else 0.1284
+                    pension_ded = round(gross * rate, 2)
+                    net = round(gross - pension_ded, 2)
 
-                if absences > 0:
-                    for d in range(absences):
-                        sim_day = np.random.randint(2, 27)
-                        sim_date = f"{year}-{month:02d}-{sim_day:02d}"
-                        
-                        just_type = np.random.choice(["medical", "permit", "unjustified"], p=[0.5, 0.3, 0.2])
-                        if just_type != "unjustified":
-                            insert_just = """
-                                INSERT INTO justifications (employee_id, date, justification_type, description, created_by)
-                                VALUES (%s, %s, %s, %s, %s)
-                                ON CONFLICT(employee_id, date) DO NOTHING
-                            """
-                            self._execute_write_raw(insert_just, (
-                                emp_id, sim_date, just_type, f"Justificación automática del mes {month}", "ia_system"
-                            ))
-                        
-                        pass
+                    essalud = round(gross * 0.09, 2)
+
+                    insert_payroll = """
+                        INSERT INTO payrolls (
+                            employee_id, period, days_worked, lateness_minutes,
+                            overtime_25_hours, overtime_35_hours, base_salary,
+                            family_allowance, overtime_pay, lateness_deduction,
+                            absence_deduction, gross_salary, pension_deduction,
+                            net_salary, essalud_contribution, created_by
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT(employee_id, period) DO NOTHING
+                    """
+                    self._execute_write_raw(insert_payroll, (
+                        emp_id, period, 30 - absences, lateness_min,
+                        ot_25, ot_35, salary, fam_allow, round(ot_pay, 2),
+                        lateness_ded, absence_ded, round(gross, 2), pension_ded,
+                        net, essalud, "ia_system"
+                    ), conn=conn, cursor=cursor)
+
+                    if absences > 0:
+                        for d in range(absences):
+                            sim_day = np.random.randint(2, 27)
+                            sim_date = f"{year}-{month:02d}-{sim_day:02d}"
+
+                            just_type = np.random.choice(["medical", "permit", "unjustified"], p=[0.5, 0.3, 0.2])
+                            if just_type != "unjustified":
+                                insert_just = """
+                                    INSERT INTO justifications (employee_id, date, justification_type, description, created_by)
+                                    VALUES (%s, %s, %s, %s, %s)
+                                    ON CONFLICT(employee_id, date) DO NOTHING
+                                """
+                                self._execute_write_raw(insert_just, (
+                                    emp_id, sim_date, just_type, f"Justificación automática del mes {month}", "ia_system"
+                                ), conn=conn, cursor=cursor)
+
+            conn.commit()
 
         print(f"[PREDICCIÓN IA] Finalizada la provisión de series temporales históricas.")
 
