@@ -68,7 +68,7 @@ echo    ACCESO ESCANER:   http://127.0.0.1:8080/
 echo ------------------------------------------------------
 echo.
 
-set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/asistencia_db
+set DATABASE_URL=postgresql://postgres:1007@localhost:5433/asistencia_db
 python run.py
 
 pause

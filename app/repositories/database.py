@@ -28,7 +28,7 @@ class Database:
         
         # URL de conexión (puede configurarse mediante variables de entorno)
         # Formato esperado: postgresql://username:password@host:port/dbname
-        self.db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/asistencia_db")
+        self.db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:1007@localhost:5433/asistencia_db")
         
         # Determinar si usamos SQLite (fallback para pruebas locales y unitarias)
         # Si la URL contiene sqlite o si estamos ejecutando pruebas unitarias de pytest
