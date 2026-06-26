@@ -115,36 +115,38 @@ class PayrollService:
                 date_str = current_date.strftime("%Y-%m-%d")
                 day_of_week = (current_date.weekday() + 1) % 7 # Python weekday 0=Lunes, ..., 6=Domingo -> Adaptar: 0=Domingo, 1=Lunes
                 
-                # ¿Tenía turno este día de la semana?
-                if day_of_week not in shifts_dict:
-                    continue  # Día libre
-
-                shift = shifts_dict[day_of_week]
-                
-                # Formatear horas del turno
-                # En SQLite TIME viene como string 'HH:MM:SS' o 'HH:MM'
                 def parse_time_str(time_obj):
                     if isinstance(time_obj, str):
                         parts = time_obj.split(":")
                         return time(int(parts[0]), int(parts[1]))
                     return time_obj
 
+                # ¿Tenía turno este día de la semana?
+                if day_of_week not in shifts_dict:
+                    # Día sin turno: si hay marcaciones, contar horas como extra
+                    if date_str in logs_by_date:
+                        day_logs = sorted(logs_by_date[date_str])
+                        if len(day_logs) > 1:
+                            entrada = day_logs[0]
+                            salida = day_logs[-1]
+                            ot_hours = max(0.0, (salida - entrada).total_seconds() / 3600.0)
+                            overtime_25_hours += ot_hours
+                    continue
+
+                shift = shifts_dict[day_of_week]
+
                 sh_start = parse_time_str(shift["start_time"])
                 sh_end = parse_time_str(shift["end_time"])
 
                 # Validar asistencia
                 if date_str not in logs_by_date:
-                    # Inasistencia
-                    # Verificar si existe justificación
                     justification = await self.justification_repo.get_by_employee_and_date(employee_id, date_str)
                     if not justification:
                         absences_count += 1
                 else:
-                    # Registró asistencia
                     day_logs = sorted(logs_by_date[date_str])
                     entrance = day_logs[0]
-                    
-                    # Calcular tardanzas (Tolerancia dinámica del turno, por defecto 10 minutos)
+
                     shift_tolerance = float(shift.get("tolerance") if shift.get("tolerance") is not None else 10.0)
                     shift_start_dt = datetime.combine(current_date, sh_start)
                     if entrance > shift_start_dt:
@@ -152,23 +154,13 @@ class PayrollService:
                         if diff > shift_tolerance:
                             lateness_minutes += int(diff)
 
-                    # Calcular horas extra o salidas tempranas si hay salida registrada (más de una marcación)
                     if len(day_logs) > 1:
                         exit_log = day_logs[-1]
                         shift_end_dt = datetime.combine(current_date, sh_end)
                         if exit_log > shift_end_dt:
-                            ot_seconds = (exit_log - shift_end_dt).total_seconds()
-                            ot_hours = max(0.0, ot_seconds / 3600.0)
-                            
-                            # En el Perú las primeras 2 horas extras diarias son al 25%, el resto al 35%
-                            if ot_hours > 0:
-                                ot_25 = min(ot_hours, 2.0)
-                                ot_35 = max(0.0, ot_hours - 2.0)
-                                overtime_25_hours += ot_25
-                                overtime_35_hours += ot_35
+                            ot_hours = max(0.0, (exit_log - shift_end_dt).total_seconds() / 3600.0)
+                            overtime_25_hours += ot_hours
                         elif exit_log < shift_end_dt:
-                            # Salida Temprana (Early Exit)
-                            # Verificar si existe justificación para no aplicar el descuento
                             justification = await self.justification_repo.get_by_employee_and_date(employee_id, date_str)
                             if not justification:
                                 ee_seconds = (shift_end_dt - exit_log).total_seconds()
@@ -181,10 +173,9 @@ class PayrollService:
             absence_deduction = round(absences_count * (base_salary / 30.0), 2)
             lateness_deduction = round(lateness_minutes * minute_wage, 2)
 
-            # Pagos extras con recargo
+            # Horas extra sin recargo (política de la empresa)
             overtime_pay = round(
-                (overtime_25_hours * hourly_wage * 1.25) + 
-                (overtime_35_hours * hourly_wage * 1.35), 2
+                (overtime_25_hours + overtime_35_hours) * hourly_wage, 2
             )
 
             # Sueldo Bruto (Gross Salary)

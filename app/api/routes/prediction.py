@@ -1,7 +1,9 @@
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, Field
 from app.services.prediction_service import PredictionService
 from app.services.auth_service import get_current_admin, require_permission
+from app.repositories.database import db
 
 router = APIRouter(prefix="/prediction", tags=["AI Predictive Analysis & Planning"], dependencies=[Depends(get_current_admin)])
 
@@ -11,6 +13,20 @@ def get_prediction_service() -> PredictionService:
 class SimulationRequest(BaseModel):
     new_employees: int = Field(..., ge=0, description="Cantidad de nuevos empleados a contratar")
     target_overtime_hours: float = Field(..., ge=0.0, description="Horas extras totales proyectadas para simular")
+    position: Optional[str] = Field(default=None, description="Cargo del nuevo empleado para usar su sueldo")
+
+@router.get(
+    "/positions",
+    summary="List available positions with salaries",
+    description="Returns distinct positions from active contracts for the simulation selector."
+)
+async def get_available_positions(
+    admin_session: dict = Depends(require_permission("payrolls", "read"))
+):
+    rows = db.execute_query(
+        "SELECT DISTINCT position, monthly_salary, hourly_wage FROM contracts WHERE is_active = TRUE ORDER BY position"
+    )
+    return rows
 
 @router.get(
     "/dashboard",
@@ -41,7 +57,7 @@ async def simulate_budget_scenario(
     admin_session: dict = Depends(require_permission("payrolls", "read"))
 ):
     try:
-        return await service.simulate_budget(request.new_employees, request.target_overtime_hours)
+        return await service.simulate_budget(request.new_employees, request.target_overtime_hours, request.position)
     except Exception as e:
         print(f"[API ERROR] Error en simulación presupuestaria: {e}")
         raise HTTPException(

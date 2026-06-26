@@ -290,29 +290,36 @@ class PredictionService:
             }
         }
 
-    async def simulate_budget(self, new_employees: int, target_overtime_hours: float) -> Dict[str, Any]:
+    async def simulate_budget(self, new_employees: int, target_overtime_hours: float, position: str = None) -> Dict[str, Any]:
         stats = await self.get_dashboard_stats()
         coefs = stats["coefficients"]
-        
+
         beta_pay = np.array(coefs["beta_payroll"])
         t_next = coefs["t_next"]
         next_month = coefs["next_month"]
-        
+
         simulated_emp_count = stats["current_emp_count"] + new_employees
         next_is_july_dec = 1.0 if next_month in [7, 12] else 0.0
 
         predicted_payroll_base = np.dot([1.0, t_next, simulated_emp_count, next_is_july_dec], beta_pay)
-        
-        avg_salary = 1600.0 # Sueldo base promedio en planilla peruana
-        avg_hourly_wage = avg_salary / 240
-        
-        cost_ot_25 = (target_overtime_hours * 0.6) * (avg_hourly_wage * 1.25)
-        cost_ot_35 = (target_overtime_hours * 0.4) * (avg_hourly_wage * 1.35)
-        total_ot_cost = cost_ot_25 + cost_ot_35
-        
+
+        position_salary = 1500.0
+        if position:
+            rows = db.execute_query(
+                "SELECT monthly_salary FROM contracts WHERE position = %s AND is_active = TRUE LIMIT 1",
+                (position,)
+            )
+            if rows:
+                position_salary = float(rows[0]["monthly_salary"])
+
+        new_emp_cost = new_employees * position_salary
+        new_emp_essalud = new_emp_cost * 0.09
+
+        hourly_wage = position_salary / 240
+        total_ot_cost = target_overtime_hours * hourly_wage
         essalud_ot_cost = total_ot_cost * 0.09
-        
-        simulated_total_payroll = predicted_payroll_base + total_ot_cost + essalud_ot_cost
+
+        simulated_total_payroll = predicted_payroll_base + new_emp_cost + new_emp_essalud + total_ot_cost + essalud_ot_cost
         simulated_total_payroll = max(round(simulated_total_payroll, 2), 0.0)
 
         base_forecast = stats["payroll_forecast"]
@@ -323,9 +330,12 @@ class PredictionService:
         return {
             "simulated_employees": simulated_emp_count,
             "simulated_overtime_hours": target_overtime_hours,
+            "simulated_position": position or "General",
+            "simulated_position_salary": position_salary,
             "simulated_payroll_cost": simulated_total_payroll,
+            "new_employees_cost": round(new_emp_cost, 2),
             "overtime_cost_impact": round(total_ot_cost, 2),
-            "essalud_impact": round(essalud_ot_cost, 2),
+            "essalud_impact": round(essalud_ot_cost + new_emp_essalud, 2),
             "variation_pct": variation_pct,
             "base_payroll_forecast": base_forecast
         }
